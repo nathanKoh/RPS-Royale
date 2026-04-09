@@ -1,0 +1,54 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #111;
+  color: #eee;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 20px;
+}
+
+#ui {
+  width: 900px;
+}
+
+.hidden {
+  display: none;
+}
+
+.error {
+  color: #ff5555;
+  margin-top: 10px;
+}
+
+#game-canvas {
+  border: 2px solid #444;
+  background: #222;
+  display: block;
+  margin-top: 10px;
+}
+
+#top-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.choice-btn {
+  margin-right: 5px;
+}
+
+.countdown.flash {
+  animation: flash 0.5s alternate infinite;
+}
+
+@keyframes flash {
+  from { color: #eee; }
+  to   { color: #ff4444; }
+}
+
+#round-result, #game-over {
+  margin-top: 10px;
+  font-size: 18px;
+}
