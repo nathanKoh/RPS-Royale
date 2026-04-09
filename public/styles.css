@@ -10,7 +10,10 @@ body {
 }
 
 #ui {
-  width: 900px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 10px;
 }
 
 .hidden {
@@ -23,10 +26,12 @@ body {
 }
 
 #game-canvas {
+  width: 100%;
+  height: auto;
+  max-width: 900px;
   border: 2px solid #444;
   background: #222;
   display: block;
-  margin-top: 10px;
 }
 
 #top-bar {
