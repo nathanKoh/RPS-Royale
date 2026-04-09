@@ -13,7 +13,8 @@ let state = {
   choiceDeadline: null,
   currentType: null,
   spawn: { x: null, y: null },
-  players: []
+  players: [],
+  inRound: true
 };
 
 // DOM elements
@@ -45,7 +46,9 @@ const gameOverDiv = document.getElementById('game-over');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
-// Simple colors for types
+const roundOverlay = document.getElementById('round-overlay');
+
+// Simple colors for types (fallback if sprites missing)
 const typeColors = {
   ROCK: '#8888ff',
   PAPER: '#88ff88',
@@ -128,6 +131,30 @@ function updateCountdown() {
   }
 }
 
+// --- Overlay update ---
+function updateRoundOverlay() {
+  if (!roundOverlay) return;
+
+  if (state.roomState !== 'ROUND_SETUP') {
+    roundOverlay.classList.remove('visible');
+    return;
+  }
+
+  const now = Date.now();
+  const remaining = Math.max(
+    0,
+    Math.ceil((state.choiceDeadline - now) / 1000)
+  );
+
+  roundOverlay.textContent = `Round ${state.roundNumber} starting in ${remaining}…`;
+
+  if (remaining <= 0) {
+    roundOverlay.classList.remove('visible');
+  } else {
+    roundOverlay.classList.add('visible');
+  }
+}
+
 // --- Event handlers ---
 createRoomBtn.addEventListener('click', () => {
   const username = usernameInput.value.trim();
@@ -160,6 +187,7 @@ startGameBtn.addEventListener('click', () => {
 choiceButtons.forEach(btn => {
   btn.addEventListener('click', () => {
     if (!state.roomId || !state.choiceDeadline) return;
+    if (!state.inRound) return;
     const type = btn.getAttribute('data-type');
     state.currentType = type;
     currentTypeSpan.textContent = type;
@@ -167,17 +195,18 @@ choiceButtons.forEach(btn => {
   });
 });
 
-canvas.addEventListener('click', e => {
+function handleSpawnSelection(x, y) {
   if (!state.roomId || !state.choiceDeadline) return;
+  if (!state.inRound) return;
   if (!state.currentType) {
     choiceStatusSpan.textContent = 'Choose Rock/Paper/Scissors first';
     return;
   }
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+
   state.spawn = { x, y };
-  choiceStatusSpan.textContent = `Chosen ${state.currentType} at (${x | 0}, ${y | 0})`;
+  choiceStatusSpan.textContent = `Chosen ${state.currentType} at (${x | 0}, ${
+    y | 0
+  })`;
 
   socket.emit('submitChoice', {
     roomId: state.roomId,
@@ -185,6 +214,21 @@ canvas.addEventListener('click', e => {
     x,
     y
   });
+}
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  handleSpawnSelection(x, y);
+});
+
+canvas.addEventListener('touchstart', e => {
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  handleSpawnSelection(x, y);
 });
 
 // --- Socket events ---
@@ -206,17 +250,27 @@ socket.on('roundSetup', data => {
   state.choiceDeadline = data.deadline;
   state.fieldWidth = data.fieldWidth;
   state.fieldHeight = data.fieldHeight;
-  state.currentType = null;
-  state.spawn = { x: null, y: null };
+
+  gameRoundNumberSpan.textContent = state.roundNumber;
+
+  const me = data.players.find(p => p.id === state.playerId);
+  state.inRound = me?.inRound ?? false;
+
+  if (!state.inRound) {
+    document.getElementById('choice-panel').classList.add('hidden');
+    choiceStatusSpan.textContent = 'You are spectating this round';
+  } else {
+    document.getElementById('choice-panel').classList.remove('hidden');
+    choiceStatusSpan.textContent = 'Choose type and spawn location';
+  }
+
   roundResultDiv.classList.add('hidden');
   gameOverDiv.classList.add('hidden');
-  gameRoundNumberSpan.textContent = state.roundNumber;
-  currentTypeSpan.textContent = '';
-  choiceStatusSpan.textContent = 'Choose type and spawn location';
+
   showGame();
 });
 
-socket.on('roundStarted', data => {
+socket.on('roundStarted', () => {
   state.roomState = 'ROUND_RUNNING';
   state.choiceDeadline = null;
   choiceStatusSpan.textContent = 'Round running!';
@@ -229,7 +283,9 @@ socket.on('stateUpdate', data => {
 socket.on('roundEnded', data => {
   state.roomState = 'ROUND_END';
   roundResultDiv.classList.remove('hidden');
-  roundResultDiv.textContent = `Round ${data.roundNumber} ended. Winning type: ${data.winningType}. Advancing players: ${data.winners.map(w => w.username).join(', ')}`;
+  roundResultDiv.textContent = `Round ${data.roundNumber} ended. Winning type: ${
+    data.winningType
+  }. Advancing players: ${data.winners.map(w => w.username).join(', ')}`;
 });
 
 socket.on('gameOver', data => {
@@ -248,8 +304,14 @@ function render() {
   requestAnimationFrame(render);
 
   updateCountdown();
+  updateRoundOverlay();
 
-  if (state.roomState === 'ROUND_SETUP' || state.roomState === 'ROUND_RUNNING' || state.roomState === 'ROUND_END' || state.roomState === 'GAME_OVER') {
+  if (
+    state.roomState === 'ROUND_SETUP' ||
+    state.roomState === 'ROUND_RUNNING' ||
+    state.roomState === 'ROUND_END' ||
+    state.roomState === 'GAME_OVER'
+  ) {
     drawGame();
   }
 }
@@ -257,7 +319,7 @@ function render() {
 function drawGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Draw background grid
+  // Background
   ctx.fillStyle = '#222';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -275,26 +337,29 @@ function drawGame() {
     ctx.stroke();
   }
 
-  // Draw players as sprites
+  const scale = canvas.clientWidth / canvas.width;
+  const size = 48 * scale;
+  const half = size / 2;
+
   state.players.forEach(p => {
     if (!p.type) return;
 
     const img = sprites[p.type];
-    if (!img.complete) return; // not loaded yet
-
-    const size = 48; // sprite size
-    const half = size / 2;
-
     ctx.globalAlpha = p.alive ? 1.0 : 0.3;
 
-    // Draw sprite centered on (x, y)
-    ctx.drawImage(img, p.x - half, p.y - half, size, size);
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, p.x - half, p.y - half, size, size);
+    } else {
+      ctx.fillStyle = typeColors[p.type] || '#ffffff';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 16 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.globalAlpha = 1.0;
 
-    // Draw username above sprite
     ctx.fillStyle = '#fff';
-    ctx.font = '12px sans-serif';
+    ctx.font = `${12 * scale}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillText(p.username, p.x, p.y - (half + 10));
   });

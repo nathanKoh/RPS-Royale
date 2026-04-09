@@ -42,7 +42,8 @@ function createRoom(hostSocketId, username) {
     alive: true,
     roomId,
     isHost: true,
-    lastChoiceRound: 0
+    lastChoiceRound: 0,
+    inRound: true
   };
 
   const room = {
@@ -125,7 +126,9 @@ function startGameLoop(room) {
   room.gameLoopInterval = setInterval(() => {
     if (room.state !== 'ROUND_RUNNING') return;
 
-    const players = Array.from(room.players.values()).filter(p => p.alive && p.type);
+    const players = Array.from(room.players.values()).filter(
+      p => p.alive && p.type
+    );
 
     // Movement
     for (const p of players) {
@@ -177,7 +180,9 @@ function stopGameLoop(room) {
 }
 
 function handleCollisions(room) {
-  const players = Array.from(room.players.values()).filter(p => p.alive && p.type);
+  const players = Array.from(room.players.values()).filter(
+    p => p.alive && p.type
+  );
   const n = players.length;
 
   for (let i = 0; i < n; i++) {
@@ -246,11 +251,21 @@ function startRoundSetup(room) {
     p.y = 0;
   }
 
+  // Mark all players as participating in this round
+  for (const p of room.players.values()) {
+    p.inRound = true;
+  }
+
   io.to(room.id).emit('roundSetup', {
     roundNumber: room.roundNumber,
     deadline: room.choiceDeadline,
     fieldWidth: FIELD_WIDTH,
-    fieldHeight: FIELD_HEIGHT
+    fieldHeight: FIELD_HEIGHT,
+    players: Array.from(room.players.values()).map(p => ({
+      id: p.id,
+      username: p.username,
+      inRound: p.inRound
+    }))
   });
 
   broadcastRoomUpdate(room);
@@ -294,16 +309,24 @@ function endRound(room, winningType) {
   room.state = 'ROUND_END';
   stopGameLoop(room);
 
-  // Determine all players who chose winningType this round
-  const winners = Array.from(room.players.values()).filter(p => p.type === winningType);
+  // Determine winners BEFORE using the variable
+  const winners = Array.from(room.players.values()).filter(
+    p => p.type === winningType
+  );
 
+  // Mark who is in the next round
+  for (const p of room.players.values()) {
+    p.inRound = p.type === winningType;
+  }
+
+  // Broadcast round results
   io.to(room.id).emit('roundEnded', {
     roundNumber: room.roundNumber,
     winningType,
     winners: winners.map(p => ({ id: p.id, username: p.username }))
   });
 
-  // Game over condition: only one player chose winningType
+  // Game over condition: only one player left
   if (winners.length === 1) {
     room.state = 'GAME_OVER';
     const winner = winners[0];
@@ -313,14 +336,14 @@ function endRound(room, winningType) {
     return;
   }
 
-  // Otherwise, keep only winners in the room for next round
+  // Build new player list for next round (only winners advance)
   const newPlayers = new Map();
   for (const p of winners) {
     newPlayers.set(p.id, p);
   }
   room.players = newPlayers;
 
-  // Small delay, then next round setup
+  // Start next round after a short delay
   setTimeout(() => {
     if (room.state === 'GAME_OVER') return;
     startRoundSetup(room);
@@ -365,7 +388,8 @@ io.on('connection', socket => {
       alive: true,
       roomId: room.id,
       isHost: false,
-      lastChoiceRound: 0
+      lastChoiceRound: 0,
+      inRound: true
     };
     room.players.set(playerId, player);
     socket.join(room.id);
@@ -397,7 +421,11 @@ io.on('connection', socket => {
     const player = room.players.get(socket.id);
     if (!player) return;
 
-    // Only allow choices for current round
+    // block spectators
+    if (!player.inRound) {
+      return;
+    }
+
     player.type = type;
     player.x = x;
     player.y = y;

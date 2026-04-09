@@ -6,45 +6,68 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="ui">
+  <div id="app">
+    <!-- Login screen -->
     <div id="login-screen">
       <h1>RPS Royale</h1>
-      <input id="username" placeholder="Username" />
-      <div>
-        <button id="create-room-btn">Create Room</button>
+      <div class="panel">
+        <label>
+          Username:
+          <input id="username" type="text" />
+        </label>
+        <div class="row">
+          <button id="create-room-btn">Create Room</button>
+        </div>
+        <div class="row">
+          <input id="join-code-input" type="text" placeholder="Join code" />
+          <button id="join-room-btn">Join Room</button>
+        </div>
+        <div id="error" class="error"></div>
       </div>
-      <div>
-        <input id="join-code-input" placeholder="Join Code" />
-        <button id="join-room-btn">Join Room</button>
-      </div>
-      <div id="error" class="error"></div>
     </div>
 
+    <!-- Lobby screen -->
     <div id="lobby-screen" class="hidden">
       <h2>Lobby</h2>
-      <p>Room Code: <span id="room-code"></span></p>
-      <p>You are: <span id="player-name"></span> (<span id="host-label"></span>)</p>
-      <p>Round: <span id="round-number">0</span></p>
-      <h3>Players</h3>
-      <ul id="player-list"></ul>
-      <button id="start-game-btn" class="hidden">Start Game</button>
+      <div class="panel">
+        <p>Room code: <span id="room-code"></span></p>
+        <p>You: <span id="player-name"></span> (<span id="host-label"></span>)</p>
+        <p>Round: <span id="round-number">0</span></p>
+        <h3>Players</h3>
+        <ul id="player-list"></ul>
+        <button id="start-game-btn" class="hidden">Start Game</button>
+      </div>
     </div>
 
+    <!-- Game screen -->
     <div id="game-screen" class="hidden">
       <div id="top-bar">
         <span>Round: <span id="game-round-number">0</span></span>
-        <span>Countdown: <span id="countdown" class="countdown"></span></span>
-        <span>Type: <span id="current-type"></span></span>
+        <span>Time left: <span id="countdown"></span></span>
+        <span>Current: <span id="current-type">None</span></span>
       </div>
-      <div id="choice-panel">
-        <button class="choice-btn" data-type="ROCK">Rock</button>
-        <button class="choice-btn" data-type="PAPER">Paper</button>
-        <button class="choice-btn" data-type="SCISSORS">Scissors</button>
-        <span id="choice-status"></span>
+
+      <div id="game-container">
+        <div id="canvas-wrapper">
+          <canvas id="game-canvas" width="800" height="600"></canvas>
+          <div id="round-overlay" class="hidden"></div>
+        </div>
+
+        <div id="side-panel">
+          <div id="choice-panel">
+            <h3>Choose your type</h3>
+            <div class="choices">
+              <button class="choice-btn" data-type="ROCK">Rock</button>
+              <button class="choice-btn" data-type="PAPER">Paper</button>
+              <button class="choice-btn" data-type="SCISSORS">Scissors</button>
+            </div>
+            <p id="choice-status">Choose type and spawn location</p>
+          </div>
+
+          <div id="round-result" class="hidden"></div>
+          <div id="game-over" class="hidden"></div>
+        </div>
       </div>
-      <canvas id="game-canvas" width="800" height="600"></canvas>
-      <div id="round-result" class="hidden"></div>
-      <div id="game-over" class="hidden"></div>
     </div>
   </div>
 

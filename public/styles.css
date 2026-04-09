@@ -1,28 +1,100 @@
-body {
-  margin: 0;
-  font-family: sans-serif;
-  background: #111;
-  color: #eee;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 20px;
+* {
+  box-sizing: border-box;
 }
 
-#ui {
-  width: 100%;
-  max-width: 900px;
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #111;
+  color: #eee;
+}
+
+#app {
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 10px;
+  padding: 16px;
 }
 
 .hidden {
-  display: none;
+  display: none !important;
+}
+
+h1, h2, h3 {
+  margin-top: 0;
+}
+
+.panel {
+  background: #1e1e1e;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+.row {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+input[type="text"] {
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #222;
+  color: #eee;
+}
+
+button {
+  padding: 8px 14px;
+  border-radius: 4px;
+  border: none;
+  background: #3a7bd5;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover {
+  background: #2f63aa;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .error {
-  color: #ff5555;
-  margin-top: 10px;
+  margin-top: 8px;
+  color: #ff6666;
+}
+
+/* Lobby */
+#player-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+/* Game layout */
+#top-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+#game-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+#canvas-wrapper {
+  position: relative;
+  flex: 1 1 600px;
+  min-width: 0;
 }
 
 #game-canvas {
@@ -34,26 +106,82 @@ body {
   display: block;
 }
 
-#top-bar {
+#side-panel {
+  flex: 0 0 260px;
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#choice-panel {
+  background: #1e1e1e;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .choice-btn {
-  margin-right: 5px;
+  flex: 1 1 30%;
 }
 
-.countdown.flash {
-  animation: flash 0.5s alternate infinite;
+#choice-status {
+  font-size: 0.9rem;
+  color: #ccc;
 }
 
-@keyframes flash {
-  from { color: #eee; }
-  to   { color: #ff4444; }
+#round-result,
+#game-over {
+  background: #1e1e1e;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.95rem;
 }
 
-#round-result, #game-over {
-  margin-top: 10px;
-  font-size: 18px;
+/* Countdown flash */
+#countdown.flash {
+  color: #ff6666;
+  font-weight: 700;
+}
+
+/* Round overlay */
+#round-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 20px 40px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  border-radius: 12px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#round-overlay.visible {
+  opacity: 1;
+}
+
+/* Responsive tweaks */
+@media (max-width: 800px) {
+  #side-panel {
+    flex: 1 1 100%;
+  }
+
+  #top-bar {
+    font-size: 0.9rem;
+  }
+
+  .choice-btn {
+    flex: 1 1 100%;
+  }
 }
